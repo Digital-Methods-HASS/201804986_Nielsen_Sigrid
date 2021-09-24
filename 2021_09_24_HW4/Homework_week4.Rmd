@@ -1,0 +1,76 @@
+---
+title: "Homework week 4"
+author: "Sigrid Agersnap Bom Nielsen"
+date: "9/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# loading packages
+pacman::p_load(tidyverse)
+```
+
+
+For this assignment, please answer the following three questions showing your code and results and then take a particular screenshot of your working environment. You can upload here (to Brightspace) the code and the URL to the screenshot OR submit everything to Github and submit here a single link to your repository.
+
+
+# 1) Use R to figure out how many elements in the vector below are greater than 2.
+```{r}
+# vector
+rooms <- c(1, 2, 1, 3, 1, NA, 3, 1, 3, 2, 1, NA, 1, 8, 3, 1, 4, NA, 1, 3, 1, 2, 1, 7, 1, NA)
+
+# solution
+sum(rooms > 2, na.rm = T)
+
+```
+Answer: There are 8 elements of the vector which are greater than 2.
+na.rm = T disregards the NA's of the vector
+
+# 2) What type of data is in the 'rooms' vector?
+
+Numberical entities and N/A's
+
+# 3) What is the result of running the median() function on the above 'rooms' vector?
+
+```{r}
+# running the median function without doing something about the NA's
+median(rooms)
+
+# the output says NA because it cannot calculate the median of NA's
+
+# if I write
+median(rooms, na.rm = T)
+
+# The output is 1.5, because it only considers the numerical proporties of the vector.
+```
+
+
+# 4) Submit the following image to Github:
+Inside your R Project (.Rproj), install the 'tidyverse' package and use the download.file() and read_csv() function to read the SAFI_clean.csv dataset into your R project as 'interviews' digital object (see instructions in https://datacarpentry.org/r-socialsci/setup.html and 'Starting with Data' section). Take a screenshot of your RStudio interface showing
+a) the line of code you used to create the object,
+b) the 'interviews' object in the Environment, and
+c) the file structure of your R project in the bottom right "Files" pane.
+Save the screenshot as an image and put it in your AUID_lastname_firstname repository inside our Github organisation (github.com/Digital-Methods-HASS) or equivalent. Place here the URL leading to the screenshot in your repository.
+
+```{r}
+############### One way of doing it
+# download the file directly from the link into R
+# I call the dataframe df for esay access
+df <- read_csv("https://ndownloader.figshare.com/files/11492171")
+
+################ Another way of doing it
+# download the file to my computer
+download.file("https://ndownloader.figshare.com/files/11492171", "data/SAFI_clean.csv", mode = "wb")
+
+# then load it into R
+interviews <- read_csv("data/SAFI_clean.csv")
+```
+
+About the file structure:
+I like to put my things in folders named by date. So next to the project file, I have a folder called '2021_09_24_HW4'. In that folder I have my Rmarkdown file and a data folder. Inside the data folder is the SAFI_clean.csv. 
+
+Link to screen shot:
