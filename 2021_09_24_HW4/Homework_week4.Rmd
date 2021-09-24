@@ -73,4 +73,4 @@ interviews <- read_csv("data/SAFI_clean.csv")
 About the file structure:
 I like to put my things in folders named by date. So next to the project file, I have a folder called '2021_09_24_HW4'. In that folder I have my Rmarkdown file and a data folder. Inside the data folder is the SAFI_clean.csv. 
 
-Link to screen shot:
+Link to screenshot: https://github.com/Digital-Methods-HASS/201804986_Nielsen_Sigrid/blob/master/2021_09_24_HW4/Skærmbillede%202021-09-24%20kl.%2013.01.06.png 
