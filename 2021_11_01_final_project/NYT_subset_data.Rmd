@@ -1,0 +1,74 @@
+---
+title: "final_project_NYT"
+author: "Sigrid Agersnap Bom Nielsen"
+date: "11/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pacman::p_load(tidyverse, jsonlite)
+```
+
+
+```{r}
+url <-  'https://api.nytimes.com/svc/search/v2/articlesearch.json?begin_date=20210101&end_date=20210501&fq=fq%20%3D%20section_name%3A(%22World%22)%20AND%20subsection_name%3A(*)&api-key=ZAJ6xiTXYbfqkdUJqQKGoyPKXhbosYQC'
+```
+
+```{r}
+# looking at the data using jsonlite 
+
+d <- fromJSON(url) %>% data.frame()
+test <- fromJSON(url)
+
+```
+
+We have what we need, both the 'World' section and a separate column with the names of the subsection. Plus, of course the individual link to each article. 
+
+*only 10 articles however* - there are only 10 articles per page. we need to loop through the pages to get all of the articles. 
+
+For the first round of data I only hace 1546 hits. This gives 
+
+```{r}
+# get total amount of pages
+pages <- round(d$response.meta.hits/10-1)[1]
+# the first page is 0 so that's why
+
+```
+roughly 154 pages!
+
+
+```{r}
+# function which takes one page number as input and
+get_article <- function(page_no){
+  articles <- fromJSON(paste0(url, "&page=", page_no)) %>% data.frame
+  Sys.sleep(6)
+  return(articles)
+}
+
+# loop through the page numbers and append to one dataframe using map_dfr (r =  by rows)
+full_df <- map_dfr(0:pages, get_article)
+
+# get an idea of the data and the classes of the data
+glimpse(df)
+
+#deselect difficult matrix like columns
+df <- full_df %>% 
+  select(-c(
+    'response.docs.multimedia', 
+    'response.docs.keywords', 
+    'response.docs.byline',
+    'response.docs.headline')
+    )
+
+# save data as csv file
+write_csv(df, 'data_url.csv', na = 'NA')
+```
+
+Next step, get the text from each url.
+Chop the text up into words. 
+Sentiment analysis on each section
+
