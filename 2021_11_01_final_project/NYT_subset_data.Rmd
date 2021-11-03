@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-pacman::p_load(tidyverse, jsonlite)
+pacman::p_load(tidyverse, jsonlite, rvest)
 ```
 
 
@@ -68,7 +68,76 @@ df <- full_df %>%
 write_csv(df, 'data_url.csv', na = 'NA')
 ```
 
-Next step, get the text from each url.
-Chop the text up into words. 
-Sentiment analysis on each section
+# Next step, get the text from each url.
+First, use rvest to get the text (headline + body) from one url - make that as function.
+Then, map it onto all of the urls. 
+
+```{r}
+#getting URL not working
+test <- read_html(df$response.docs.web_url[1])
+
+# text headline - first try
+test %>% html_elements('.css-ymxi58, .e1h9rw200') %>% 
+  html_text()
+
+
+# text headline - better option
+test %>% html_element('[data-testid="headline"]') %>% 
+  html_text()
+
+# text body !
+test %>% html_elements('.meteredContent') %>% 
+  html_text()
+
+
+# testing on 1 row only  - function
+get_text <- function(n){
+  link = read_html(df$response.docs.web_url[n])
+  
+  headline = link %>% html_element('[data-testid="headline"]') %>% 
+  html_text()
+  
+  text = link %>% html_elements('.meteredContent') %>% 
+  html_text()
+  
+  d = data.frame(headline, text)
+  
+  Sys.sleep(6)
+  
+  return(d)
+}
+
+# it works!!
+test_3 <- get_text(3)
+test2 <- get_text(df$response.docs.web_url[3])
+test2
+test_3
+
+
+df_text <- map_dfr(1:5, get_text)
+
+# merge when done
+#df_global <- merge(df_text, df)
+```
+
+
+```{r}
+pacman::p_load(vader)
+
+get_vader(test_3$text)
+
+sen_list <- get_vader(test_3$text)
+
+sen_list[2]
+
+sen_score <- length(get_vader(test_3$text)
+
+
+```
+
+
+# Chop the text up into words. 
+First one, then more. 
+# Sentiment analysis on each section
+First one, then by section.
 
