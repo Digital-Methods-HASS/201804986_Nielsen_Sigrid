@@ -14,13 +14,13 @@ pacman::p_load(tidyverse, jsonlite, rvest, vader)
 ```
 
 
+
 ```{r}
 url <-  'https://api.nytimes.com/svc/search/v2/articlesearch.json?begin_date=20210101&end_date=20210501&fq=fq%20%3D%20section_name%3A(%22World%22)%20AND%20subsection_name%3A(*)&api-key=ZAJ6xiTXYbfqkdUJqQKGoyPKXhbosYQC'
 ```
 
 ```{r}
 # looking at the data using jsonlite 
-
 d <- fromJSON(url) %>% data.frame()
 test <- fromJSON(url)
 
@@ -137,14 +137,16 @@ df_text <- map_dfr(1:1546, get_text)
 write_csv(df_text, 'df_text.csv')
 
 
-
 # check for missing values
 which(is.na(df_text) == T)
+
+#none!
 ```
 
 # Time to get to the sentiment analysis 
 
 ```{r}
+# testing out who the vader package works
 get_vader(test_3$text)
 
 sen_list <- get_vader(test_3$text)
@@ -153,7 +155,7 @@ sen_list[2]
 
 sen_score <- length(get_vader(test_3$text)
 
-
+# get sentiment for one row only
 headline_sentiment_test <- get_vader(df_text$headline[1])
 
 get_vader(df_text$headline[1])
@@ -162,9 +164,10 @@ headline_sentiment_compound_test <- headline_sentiment_test[2]
 
 
 ```{r}
-#Make a sentiment analysis on one row only
+#Make a sentiment analysis on one row only - function
 
 get_sentiment <- function(n){
+  # get the sentiment of the headline and save it into different variables
   headline_sentiment = get_vader(df_text$headline[n])
   headline_sentiment_comp = headline_sentiment[2]
   headline_sentiment_pos = headline_sentiment[3]
@@ -172,6 +175,7 @@ get_sentiment <- function(n){
   headline_sentiment_neg = headline_sentiment[5]
   headline_sentiment_but = headline_sentiment[6]
   
+  # get the sentiment of the text and save it into different variables
   text_sentiment = get_vader(df_text$text[n])
   text_sentiment_comp = text_sentiment[2]
   text_sentiment_pos = text_sentiment[3]
@@ -179,9 +183,11 @@ get_sentiment <- function(n){
   text_sentiment_neg = text_sentiment[5]
   text_sentiment_but = text_sentiment[6]
   
+  # printing a message to follow the process
   message = 'Retrieving article no'
   print(paste(message, n))
   
+  # gather the variables in one dataframe
   df_sent = 
     data.frame(
     headline_sentiment_comp,
@@ -193,25 +199,30 @@ get_sentiment <- function(n){
     text_sentiment_pos,
     text_sentiment_neu,
     text_sentiment_neg,
-    text_sentiment_but
+    text_sentiment_but, 
+    row.names = n # fixing row names to be 1:1546
   )
   
   return(df_sent)
 }
 
-#test
+#test one one row only - works
 sent_test = get_sentiment(1)
 
-# real deal
+# real deal - will prabably take about 3 hours to run
+df_sentiment <- map_dfr(1:1546, get_sentiment)
 
-df_sentiment <- map_dfr(1:5, get_sentiment)
-
-
+# merge some of df and df_text(maybe not?) and df_sentiment
 ```
-
-
-# Chop the text up into words. 
-First one, then more. 
 # Sentiment analysis on each section
-First one, then by section.
+Read about Vader - how does it work, what are the possibilities within the package, which approach does it have to grading words, what are its flaws etc. 
+Can I simply use mean() to get a mean sentiment compound score per world section? 
 
+# Plotting time
+
+# make presentation - Tuesday the 9th ? 
+# make video before the 22nd of November
+# write report 
+
+# make nice knitted document with floating titles etc. (see homework)
+# find the link which Jonathan posted on the slack channel 
