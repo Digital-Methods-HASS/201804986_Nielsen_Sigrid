@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-pacman::p_load(tidyverse, jsonlite, rvest)
+pacman::p_load(tidyverse, jsonlite, rvest, vader)
 ```
 
 
@@ -69,25 +69,29 @@ write_csv(df, 'data_url.csv', na = 'NA')
 ```
 
 # Next step, get the text from each url.
-First, use rvest to get the text (headline + body) from one url - make that as function.
+First, use rvest to get the text (headline + body) from one url - make that as a function.
 Then, map it onto all of the urls. 
 
 ```{r}
-#getting URL not working
+#getting URL 
 test <- read_html(df$response.docs.web_url[1])
 
 # text headline - first try
-test %>% html_elements('.css-ymxi58, .e1h9rw200') %>% 
+ test %>% html_elements('.css-ymxi58, .e1h9rw200') %>% 
   html_text()
 
-
 # text headline - better option
-test %>% html_element('[data-testid="headline"]') %>% 
+test_headline <- test %>% html_element('[data-testid="headline"]') %>% 
   html_text()
 
 # text body !
-test %>% html_elements('.meteredContent') %>% 
+test_text <- test %>% html_elements('.meteredContent') %>% 
   html_text()
+
+test_headline = ifelse(length(test_headline) == 0, 'NA', test_headline)
+test_text = ifelse(length(test_text) == 0, 'NA', test_text)
+
+d_test <- data.frame(test_headline, test_text)
 
 
 # testing on 1 row only  - function
@@ -100,9 +104,15 @@ get_text <- function(n){
   text = link %>% html_elements('.meteredContent') %>% 
   html_text()
   
+  headline = ifelse(length(headline) == 0, 'NA', headline)
+  text = ifelse(length(text) == 0, 'NA', text)
+  
   d = data.frame(headline, text)
   
   Sys.sleep(6)
+  
+  message = 'Retrieving article no'
+  print(paste(message, n))
   
   return(d)
 }
@@ -114,16 +124,27 @@ test2
 test_3
 
 
+# this also works!
 df_text <- map_dfr(1:5, get_text)
 
-# merge when done
+# merge when done - works
 #df_global <- merge(df_text, df)
+
+
+# make the big dataframe
+df_text <- map_dfr(1:1546, get_text)
+
+write_csv(df_text, 'df_text.csv')
+
+
+
+# check for missing values
+which(is.na(df_text) == T)
 ```
 
+# Time to get to the sentiment analysis 
 
 ```{r}
-pacman::p_load(vader)
-
 get_vader(test_3$text)
 
 sen_list <- get_vader(test_3$text)
@@ -131,6 +152,59 @@ sen_list <- get_vader(test_3$text)
 sen_list[2]
 
 sen_score <- length(get_vader(test_3$text)
+
+
+headline_sentiment_test <- get_vader(df_text$headline[1])
+
+get_vader(df_text$headline[1])
+headline_sentiment_compound_test <- headline_sentiment_test[2]
+```
+
+
+```{r}
+#Make a sentiment analysis on one row only
+
+get_sentiment <- function(n){
+  headline_sentiment = get_vader(df_text$headline[n])
+  headline_sentiment_comp = headline_sentiment[2]
+  headline_sentiment_pos = headline_sentiment[3]
+  headline_sentiment_neu = headline_sentiment[4]
+  headline_sentiment_neg = headline_sentiment[5]
+  headline_sentiment_but = headline_sentiment[6]
+  
+  text_sentiment = get_vader(df_text$text[n])
+  text_sentiment_comp = text_sentiment[2]
+  text_sentiment_pos = text_sentiment[3]
+  text_sentiment_neu = text_sentiment[4]
+  text_sentiment_neg = text_sentiment[5]
+  text_sentiment_but = text_sentiment[6]
+  
+  message = 'Retrieving article no'
+  print(paste(message, n))
+  
+  df_sent = 
+    data.frame(
+    headline_sentiment_comp,
+    headline_sentiment_pos,
+    headline_sentiment_neu,
+    headline_sentiment_neg,
+    headline_sentiment_but,
+    text_sentiment_comp,
+    text_sentiment_pos,
+    text_sentiment_neu,
+    text_sentiment_neg,
+    text_sentiment_but
+  )
+  
+  return(df_sent)
+}
+
+#test
+sent_test = get_sentiment(1)
+
+# real deal
+
+df_sentiment <- map_dfr(1:5, get_sentiment)
 
 
 ```
