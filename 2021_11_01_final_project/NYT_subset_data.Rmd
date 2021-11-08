@@ -14,7 +14,6 @@ pacman::p_load(tidyverse, jsonlite, rvest, vader)
 ```
 
 
-
 ```{r}
 url <-  'https://api.nytimes.com/svc/search/v2/articlesearch.json?begin_date=20210101&end_date=20210501&fq=fq%20%3D%20section_name%3A(%22World%22)%20AND%20subsection_name%3A(*)&api-key=ZAJ6xiTXYbfqkdUJqQKGoyPKXhbosYQC'
 ```
@@ -30,12 +29,12 @@ We have what we need, both the 'World' section and a separate column with the na
 
 *only 10 articles however* - there are only 10 articles per page. we need to loop through the pages to get all of the articles. 
 
-For the first round of data I only hace 1546 hits. This gives 
+For the first round of data I only have 1546 hits. This gives 
 
 ```{r}
 # get total amount of pages
 pages <- round(d$response.meta.hits/10-1)[1]
-# the first page is 0 so that's why
+# the first page is 0 so that's why I subtract 1
 
 ```
 roughly 154 pages!
@@ -66,6 +65,29 @@ df <- full_df %>%
 
 # save data as csv file
 write_csv(df, 'data_url.csv', na = 'NA')
+
+# renaming and choosing relevant columns 
+df_articles <- df %>% 
+    rename(
+      abstract = response.docs.abstract,
+      url = response.docs.web_url,
+      snippet = response.docs.snippet,
+      lead_paragraph = response.docs.lead_paragraph,
+      pub_date = response.docs.pub_date,
+      news_desk = response.docs.news_desk,
+      section = response.docs.section_name,
+      subsection = response.docs.subsection_name,
+      source = response.docs.source,
+      type = response.docs.type_of_material,
+      id = response.docs._id,
+      word_count = response.docs.word_count
+      )
+
+df_articles <- df_articles %>% 
+  select(
+    -c(starts_with("response.")
+    )
+  )
 ```
 
 # Next step, get the text from each url.
@@ -74,7 +96,7 @@ Then, map it onto all of the urls.
 
 ```{r}
 #getting URL 
-test <- read_html(df$response.docs.web_url[1])
+test <- read_html(df_articles$url[1])
 
 # text headline - first try
  test %>% html_elements('.css-ymxi58, .e1h9rw200') %>% 
@@ -96,7 +118,7 @@ d_test <- data.frame(test_headline, test_text)
 
 # testing on 1 row only  - function
 get_text <- function(n){
-  link = read_html(df$response.docs.web_url[n])
+  link = read_html(df_articles$url[n])
   
   headline = link %>% html_element('[data-testid="headline"]') %>% 
   html_text()
@@ -119,8 +141,6 @@ get_text <- function(n){
 
 # it works!!
 test_3 <- get_text(3)
-test2 <- get_text(df$response.docs.web_url[3])
-test2
 test_3
 
 
@@ -209,10 +229,10 @@ get_sentiment <- function(n){
 #test one one row only - works
 sent_test = get_sentiment(1)
 
-# real deal - will prabably take about 3 hours to run
+# real deal - will probably take about 3 hours to run
 df_sentiment <- map_dfr(1:1546, get_sentiment)
 
-# merge some of df and df_text(maybe not?) and df_sentiment
+# merge some of df_articles and df_text(maybe not?) and df_sentiment
 ```
 # Sentiment analysis on each section
 Read about Vader - how does it work, what are the possibilities within the package, which approach does it have to grading words, what are its flaws etc. 
@@ -224,5 +244,6 @@ Can I simply use mean() to get a mean sentiment compound score per world section
 # make video before the 22nd of November
 # write report 
 
+# write and comment code nicely - incl. testing scenarios and explanations of the code - it shows the workflow and is useful when understanding the code and data 
 # make nice knitted document with floating titles etc. (see homework)
 # find the link which Jonathan posted on the slack channel 
