@@ -232,13 +232,93 @@ sent_test = get_sentiment(1)
 # real deal - will probably take about 3 hours to run
 df_sentiment <- map_dfr(1:1546, get_sentiment)
 
-# merge some of df_articles and df_text(maybe not?) and df_sentiment
+#write_csv(df_sentiment, 'df_sentiment.csv')
+
+# merge df_articles and df_text and df_sentiment
+df_complete <- cbind(df_articles, df_text)
+
+df_complete <- cbind(df_complete, df_sentiment)
 ```
 # Sentiment analysis on each section
 Read about Vader - how does it work, what are the possibilities within the package, which approach does it have to grading words, what are its flaws etc. 
 Can I simply use mean() to get a mean sentiment compound score per world section? 
 
 # Plotting time
+```{r}
+# now we want to plot by each section
+glimpse(df_complete)
+```
+
+
+```{r}
+df_complete <- df_complete %>% 
+  mutate(
+    no = 1:1546,
+    headline_sentiment_comp = as.numeric(headline_sentiment_comp),
+    headline_sentiment_pos = as.numeric(headline_sentiment_pos),
+    headline_sentiment_neg = as.numeric(headline_sentiment_neg),
+    headline_sentiment_neu = as.numeric(headline_sentiment_neu),
+    headline_sentiment_but = as.numeric(headline_sentiment_but),
+    text_sentiment_comp = as.numeric(text_sentiment_comp),
+    text_sentiment_pos = as.numeric(text_sentiment_pos),
+    text_sentiment_neg = as.numeric(text_sentiment_neg),
+    text_sentiment_neu = as.numeric(text_sentiment_neu),
+    text_sentiment_but = as.numeric(text_sentiment_but),
+    subsection = as.factor(subsection)
+  )
+```
+
+
+```{r}
+write_csv(df_complete, 'df_complete.csv')
+```
+
+
+```{r}
+df_complete <- df_complete %>% 
+  select(contains('sentiment')) %>% 
+           as.numeric()
+```
+
+
+```{r}
+df_complete %>% ggplot() +
+  aes(no, headline_sentiment_comp, color = subsection) +
+  geom_point()
+
+
+df_complete %>% ggplot() +
+  aes(subsection, headline_sentiment_comp) +
+  stat_summary(fun = mean, geom = 'point')
+```
+```{r}
+df_complete %>% filter(
+  type == 'News' | type == 'Orbituary (Obit)' | type == 'briefing'
+  ) %>% ggplot() +
+  aes(subsection, headline_sentiment_comp) +
+  stat_summary(fun = mean, geom = 'point')
+```
+
+```{r}
+#remove videos
+df_complete <- df_complete %>% 
+  filter(
+    type == 'News' | 
+  )
+)
+Video
+Interactive Feature
+```
+
+```{r}
+library(lmerTest)
+
+m1 <- lm(headline_sentiment_comp ~ subsection, df_complete)
+summary(m1)
+
+m2 <- lm(text_sentiment_comp ~ subsection, test)
+summary(m2)
+```
 
 # make presentation - Tuesday the 9th ? 
 # make video before the 22nd of November
