@@ -438,7 +438,12 @@ df_full %>% filter(
   ggplot() +
   aes(subsection, headline_sentiment_comp) +
   stat_summary(fun = mean, geom = 'point') + 
-  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1)
+  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1) +
+  labs(
+    title = 'Sentiment compound score of the headlines of articles',
+    subtitle = 'Articles from New York Times (1st of January - 15th of September 2021)',
+    x = '', 
+    y = 'Compound score')
 
 # text sentiment compound score
 df_full %>% filter(
@@ -448,7 +453,12 @@ df_full %>% filter(
   ggplot() +
   aes(subsection, text_sentiment_comp) +
   stat_summary(fun = mean, geom = 'point') + 
-  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1)
+  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1) +
+  labs(
+    title = 'Sentiment compound score of the main text of articles',
+    subtitle = 'Articles from New York Times (1st of January - 15th of September 2021)',
+    x = '', 
+    y = 'Compound score')
 ```
 
 
@@ -510,7 +520,35 @@ df_long %>%
   stat_summary(fun = 'mean', geom = 'line', color = 'green', aes(group = 1))
 
 ```
+```{r}
+# Plotting the number of articles per section
+df_full %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  ggplot() +
+  aes(x = subsection, fill = subsection) +
+  geom_bar() +
+  theme(legend.position = 'NULL')
 
+
+# number of words per article on average
+#type == news ? 
+
+df_full %>% 
+  filter(
+    !subsection == 'What in the World',
+    type == 'News'
+  ) %>% 
+  ggplot() +
+  aes(subsection, word_count) + 
+  stat_summary(fun = 'mean', geom = 'point')
+```
+Although there is great difference between the number of articles per subsection, the smallest number of articles is still something; that is, Australia has 3492 articles. 
+
+*number of words per article*
+*consider*
+Is this something which affects my sentiment analysis? 
 
 ```{r}
 library(lmerTest)
@@ -534,6 +572,7 @@ summary(m2)
 # NYT
 - How do the NYT divide the world into sections? Is Russia a part of Europe? what is 'Americas'?
 What is the 'What in the world' section?
+- figure out how many articles I have from each world section and how big the word count is - graphs
 
 # To do
 -  make presentation - Tuesday the 16th 
