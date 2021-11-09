@@ -9,50 +9,112 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+### CDS exam project - description
+For this project, I want to scrape articles from the 'World' section of the New York Times. Then, I'll make a sentiment analysis on each article's headline and main text. This I'll use to see if there's any difference between how negative the different parts of the world are referred to. That is, I suspect that news, especially from outside of the country (that is, outside of the United States), will be mostly negative, as it seems that negative news are more news worthy. The question is, if some parts of the world are more negative than others. As I'm only scraping articles from the 1st of January 2021 to the 15th of September 2021, it is important to remember that some of the conflicts, which might take up a lot of headlines for a particular part of the world, have not been solved in this period of time. Nevertheless, this is exploratory, as I will not perform any statistical tests on the data, I'll only try to visualize it in a meaningful way. Thus, the question of why will be difficult to answer from this project, but it will take a look at a specific point in time and this might be interesting, and thereby raise even more questions. 
+
+## Methods
+I'm using the New York Times API tool, where I have made two searches, as there is an upper limit to how much data you can retrieve from the NYT.
+*explain what an API is*
+
+In the API I wrote the begin and end data for my search. First search was from the 1st of January to the 1st of May 2021. The second search was from 2nd of May to the 15th of September 2021. 
+To retrieve this exact data, I wrote the following in the filter called 'fq': 
+fq = section_name:("World") AND subsection_name:(*). 
+
+This gives me all of the articles in that period of time from the 'World' section and additionally gives me a column which specifies which part of the world the articles writes about. 
+
+The API then gives you a URL, which is in JSON format. To make this readable, I downloaded a Safari extension called JSON Peep (Lev Bruk, 2019).
+
+It works as follows: The url has several pages, starting at page no. 0. You change the page by writing '&page=1' at the end of the url. Every page has 10 articles. I made a function to loop through the different pages. 
+
+Then, I used the jsonlite package (Ooms, 2014) to download the data and put it into a dataframe.
+
+Now to the coding. First, I load relevant packages. 
+
+```{r loading packages}
 pacman::p_load(tidyverse, jsonlite, rvest, vader)
 ```
 
+Then, I save the url from the API into a variable. 
 
-```{r}
+As I did this in two installments, I have commented the second one out. It takes a while to run, and it works the same way, so if you want to run the code, I suggest only running the first url, which has the data from the 1st of January to the 1st of May 2021 (a bit less data than the second time around).
+
+```{r saving initial url}
+# first round of data collection
 url <-  'https://api.nytimes.com/svc/search/v2/articlesearch.json?begin_date=20210101&end_date=20210501&fq=fq%20%3D%20section_name%3A(%22World%22)%20AND%20subsection_name%3A(*)&api-key=ZAJ6xiTXYbfqkdUJqQKGoyPKXhbosYQC'
+
+# second round of data collection
+url2 <- 'https://api.nytimes.com/svc/search/v2/articlesearch.json?begin_date=20210502&end_date=20210915&fq=fq%20%3D%20section_name%3A(%22World%22)%20AND%20subsection_name%3A(*)%20&api-key=ZAJ6xiTXYbfqkdUJqQKGoyPKXhbosYQC'
 ```
 
-```{r}
+To see what the data looked like, I used the fromJSON() function from the jsonlite package to get the data from only one page of the url.
+
+```{r getting data from one page of the url using jsonlite}
 # looking at the data using jsonlite 
 d <- fromJSON(url) %>% data.frame()
 test <- fromJSON(url)
 
+# second time around
+# d2 <- fromJSON(url2) %>% data.frame()
+
 ```
 
-We have what we need, both the 'World' section and a separate column with the names of the subsection. Plus, of course the individual link to each article. 
+It looks good, we seemingly have what we need; both the 'World' section and a separate column with the names of the subsection. Plus, of course the individual link to each article. 
 
-*only 10 articles however* - there are only 10 articles per page. we need to loop through the pages to get all of the articles. 
+As mentioned, every page contains 10 articles. I'll now make a function, which loops through all of the pages to get information about all of the articles. When making a function which scrapes the URL, it is very important to include Sys.sleep(6), which pauses the loop for 6 seconds every time is has retrieved the data from one page. The NYT write to do this when using their API, so their servers wil not think that they are under cyber-attack. You can change this by writing to them to get a higher limit of downloads per minut, but for this project I didn't. 
 
-For the first round of data I only have 1546 hits. This gives 
+Now, I need to figure out how many pages I have in total. 
 
-```{r}
-# get total amount of pages
+For the first round of data I only have 1546 hits. This gives:
+
+```{r get number of pages}
+# first time around
 pages <- round(d$response.meta.hits/10-1)[1]
 # the first page is 0 so that's why I subtract 1
 
+# second time around
+pages2 <- round(d2$response.meta.hits/10-1)[1]
+
 ```
-roughly 154 pages!
+I have roughly 154 pages. This is great, as the NYT API has an upper limit of downloading from more than 200 pages.
 
+Explanation of the homemade function; get_article():
+The function takes a page number as input. It then uses the fromJSON() function (as before) to get the data from the page. I write the url using the paste0() function, which then takes the initial url, adds '&page=' and then the given page number. This is then piped into a dataframe. 
 
-```{r}
-# function which takes one page number as input and
+The process is then paused for 6 seconds due to the reason mentioned above. 
+I then added a message to be printed every time the function has looped through one page, so I know how the coding is going. A function must always return something. Here, I return the 'articles' data frame, which has one row per article. 
+
+I then use map_dfr() which makes a for loop. So, it takes every page number and run it through the function, and then saves all of the data frames into one big data frame. 
+
+Then, I take a quick glimpse of the data, and remove some weird list/matrix columns of the data frame. These columns made it difficult to write the data to a csv file. 
+I rename the relevant columns and write the big data frame containing all of the urls to a csv file, so I won't have to run the code again (if necessary).
+
+```{r function: get the urls of each article into one dataframe}
+# function which takes one page number as input and gets the url 
 get_article <- function(page_no){
+  
   articles <- fromJSON(paste0(url, "&page=", page_no)) %>% data.frame
-  Sys.sleep(6)
+  
+  Sys.sleep(6) # halts the process
+  
+  #print a message to know how the coding is going
+  message = 'Retrieving page no'
+  print(paste(message, page_no))
+  
   return(articles)
 }
 
 # loop through the page numbers and append to one dataframe using map_dfr (r =  by rows)
+# first data batch
 full_df <- map_dfr(0:pages, get_article)
 
+# second data batch
+#df2_get_urls <- map_dfr(0:pages2, get_article)
+```
+
+
+```{r cleaning the dataframe}
 # get an idea of the data and the classes of the data
-glimpse(df)
+glimpse(full_df)
 
 #deselect difficult matrix like columns
 df <- full_df %>% 
@@ -62,11 +124,23 @@ df <- full_df %>%
     'response.docs.byline',
     'response.docs.headline')
     )
+```
 
+
+```{r write to csv}
 # save data as csv file
+# first batch
 write_csv(df, 'data_url.csv', na = 'NA')
 
+# second batch
+#write_csv(df2_url, 'data2_url.csv', na = 'NA')
+```
+
+
+```{r cleaning the dataframe 1st}
 # renaming and choosing relevant columns 
+
+# first batch
 df_articles <- df %>% 
     rename(
       abstract = response.docs.abstract,
@@ -83,18 +157,45 @@ df_articles <- df %>%
       word_count = response.docs.word_count
       )
 
-df_articles <- df_articles %>% 
+df_articles <- df %>% 
   select(
     -c(starts_with("response.")
     )
   )
 ```
 
-# Next step, get the text from each url.
-First, use rvest to get the text (headline + body) from one url - make that as a function.
-Then, map it onto all of the urls. 
 
-```{r}
+```{r cleaning the dataframe 2nd}
+# second batch
+df_articles2 <- df2_url %>% 
+    rename(
+      abstract = response.docs.abstract,
+      url = response.docs.web_url,
+      snippet = response.docs.snippet,
+      lead_paragraph = response.docs.lead_paragraph,
+      pub_date = response.docs.pub_date,
+      news_desk = response.docs.news_desk,
+      section = response.docs.section_name,
+      subsection = response.docs.subsection_name,
+      source = response.docs.source,
+      type = response.docs.type_of_material,
+      id = response.docs._id,
+      word_count = response.docs.word_count
+      )
+
+df_articles2 <- df_articles2 %>% 
+  select(
+    -c(starts_with("response.")
+    )
+  )
+```
+
+# Get the text from each url
+First, use rvest to get the text (headline + body) from one url 
+
+I did this by exploring the source code behind one of the articles to see exactly which *javascript* markers I needed.
+
+```{r testing rvest}
 #getting URL 
 test <- read_html(df_articles$url[1])
 
@@ -106,17 +207,16 @@ test <- read_html(df_articles$url[1])
 test_headline <- test %>% html_element('[data-testid="headline"]') %>% 
   html_text()
 
-# text body !
+# text body
 test_text <- test %>% html_elements('.meteredContent') %>% 
   html_text()
+```
 
-test_headline = ifelse(length(test_headline) == 0, 'NA', test_headline)
-test_text = ifelse(length(test_text) == 0, 'NA', test_text)
+It works! I now make this into a function, which I then map onto each row of my data frame.
 
-d_test <- data.frame(test_headline, test_text)
+```{r rvest function}
+# retrieving the text (headline + main) from each URL function
 
-
-# testing on 1 row only  - function
 get_text <- function(n){
   link = read_html(df_articles$url[n])
   
@@ -126,12 +226,13 @@ get_text <- function(n){
   text = link %>% html_elements('.meteredContent') %>% 
   html_text()
   
+  # adding a safety measurement in case there is no text to find (e.g., if URL leads to a video)
   headline = ifelse(length(headline) == 0, 'NA', headline)
   text = ifelse(length(text) == 0, 'NA', text)
   
   d = data.frame(headline, text)
   
-  Sys.sleep(6)
+  Sys.sleep(6) # halting the process
   
   message = 'Retrieving article no'
   print(paste(message, n))
@@ -139,23 +240,18 @@ get_text <- function(n){
   return(d)
 }
 
-# it works!!
+# testing if it works - it does
 test_3 <- get_text(3)
 test_3
-
 
 # this also works!
 df_text <- map_dfr(1:5, get_text)
 
-# merge when done - works
-#df_global <- merge(df_text, df)
-
-
-# make the big dataframe
+# make the big dataframe - first batch
 df_text <- map_dfr(1:1546, get_text)
 
-write_csv(df_text, 'df_text.csv')
-
+# second batch 
+#df_text2 <- map_dfr(1:1946, get_text)
 
 # check for missing values
 which(is.na(df_text) == T)
@@ -163,27 +259,44 @@ which(is.na(df_text) == T)
 #none!
 ```
 
+Remember to save your work. 
+
+```{r save as csv}
+#write_csv(df_text, 'df_text.csv')
+
+#write_csv(df_text, 'df_text2.csv')
+```
+
+```{r merge data frames}
+# merge when done - works
+#df_global <- merge(df_text, df)
+# DELETE
+```
+
 # Time to get to the sentiment analysis 
 
-```{r}
-# testing out who the vader package works
+The get_vader() function spits out a nested list of 6 lists; the score per word in the text (word_score), a compound score, a positive score, a neutral score, a negative score and a but count. Thus, by indexing the variable in which I've saved the result of get_vader(), I can specify which score I want.  
+
+```{r testing VADER}
+# testing out how the vader package works
 get_vader(test_3$text)
 
+# saving the sentiment analysis in an object
 sen_list <- get_vader(test_3$text)
 
+# getting the compound score
 sen_list[2]
 
-sen_score <- length(get_vader(test_3$text)
-
-# get sentiment for one row only
+# get headline sentiment for one row only
 headline_sentiment_test <- get_vader(df_text$headline[1])
 
-get_vader(df_text$headline[1])
+# get headline sentiment compound score for one row only 
 headline_sentiment_compound_test <- headline_sentiment_test[2]
 ```
 
+As I've now figured out how the VADER get_vader() function works, I can now implement into a function, which takes one row number as input. 
 
-```{r}
+```{r Sentiment analysis function}
 #Make a sentiment analysis on one row only - function
 
 get_sentiment <- function(n){
@@ -204,10 +317,10 @@ get_sentiment <- function(n){
   text_sentiment_but = text_sentiment[6]
   
   # printing a message to follow the process
-  message = 'Retrieving article no'
+  message = 'Getting the sentiment of article no'
   print(paste(message, n))
   
-  # gather the variables in one dataframe
+  # gather the variables in one data frame
   df_sent = 
     data.frame(
     headline_sentiment_comp,
@@ -220,18 +333,30 @@ get_sentiment <- function(n){
     text_sentiment_neu,
     text_sentiment_neg,
     text_sentiment_but, 
-    row.names = n # fixing row names to be 1:1546
+    row.names = n # fixing row names to be 1:1546 or 1:1946
   )
   
   return(df_sent)
 }
+```
 
-#test one one row only - works
+First, I test that the function works on one row only. Then I test few rows. Finally, I run the function on the entire data set. I've added Sys.time() to see how long it took for the code to run. 
+
+```{r Sentiment analysis function - test + execution 1st batch}
+#test one one row only - it works
 sent_test = get_sentiment(1)
 
-# real deal - will probably take about 3 hours to run
-df_sentiment <- map_dfr(1:1546, get_sentiment)
+# adding start and end time to get a feeling of how long the code will take to run
+start_time = Sys.time()
+test2 = map_dfr(1:7, get_sentiment)
+end_time = Sys.time() - start_time
+print(end_time)
 
+# real deal - will probably take a few hours to run
+df_sentiment <- map_dfr(1:1546, get_sentiment)
+```
+
+```{r Save the data + merge data frames 1st batch}
 #write_csv(df_sentiment, 'df_sentiment.csv')
 
 # merge df_articles and df_text and df_sentiment
@@ -239,21 +364,46 @@ df_complete <- cbind(df_articles, df_text)
 
 df_complete <- cbind(df_complete, df_sentiment)
 ```
-# Sentiment analysis on each section
-Read about Vader - how does it work, what are the possibilities within the package, which approach does it have to grading words, what are its flaws etc. 
-Can I simply use mean() to get a mean sentiment compound score per world section? 
 
-# Plotting time
-```{r}
-# now we want to plot by each section
-glimpse(df_complete)
+```{r Sentiment analysis function - execution 2nd batch}
+# adding start and end time to get a feeling of how long the code will take to run
+start_time = Sys.time()
+df_sentiment2 <- map_dfr(1:1946, get_sentiment)
+end_time = Sys.time() - start_time
+print(end_time)
+
+# took about 1,5 hour to run
 ```
 
+```{r Save the data + merge data frames 2nd batch}
+# save the data
+#write_csv(df_sentiment2, 'df_sentiment2.csv')
 
-```{r}
-df_complete <- df_complete %>% 
+# merge df_articles and df_text and df_sentiment
+df_complete2 <- cbind(df_articles2, df_text2)
+
+# merge that with the sentiment data frame
+df_complete2 <- cbind(df_complete2, df_sentiment2)
+```
+
+```{r joining the two data sets}
+df_full <- rbind(df_complete, df_complete2) # bind by row
+```
+
+Alright! 
+Now we have one big data frame containing one article per row including the headline, main text and sentiment analysis scores. Now it is almost time to plot. 
+
+But first, I need to fix the data set (classes, etc.). 
+
+```{r glimpse of the full data set}
+# now we want to plot by each section
+glimpse(df_full)
+```
+
+```{r fixing the full data set }
+df_full <- df_full %>% 
   mutate(
-    no = 1:1546,
+    no = 1:3492,
     headline_sentiment_comp = as.numeric(headline_sentiment_comp),
     headline_sentiment_pos = as.numeric(headline_sentiment_pos),
     headline_sentiment_neg = as.numeric(headline_sentiment_neg),
@@ -268,62 +418,137 @@ df_complete <- df_complete %>%
   )
 ```
 
+Saving the full, beautiful data set. 
 
-```{r}
-write_csv(df_complete, 'df_complete.csv')
+```{r write to csv}
+#write_csv(df_full, 'df_full.csv')
 ```
 
-
+# Plotting time
 ```{r}
-df_complete <- df_complete %>% 
-  select(contains('sentiment')) %>% 
-           as.numeric()
-```
-
-
-```{r}
-df_complete %>% ggplot() +
+# bad plot
+df_full %>% ggplot() +
   aes(no, headline_sentiment_comp, color = subsection) +
   geom_point()
 
-
-df_complete %>% ggplot() +
+# headline sentiment compound score
+df_full %>% filter(
+  !subsection == 'What in the World'
+  ) %>% 
+  ggplot() +
   aes(subsection, headline_sentiment_comp) +
-  stat_summary(fun = mean, geom = 'point')
-```
-```{r}
-df_complete %>% filter(
-  type == 'News' | type == 'Orbituary (Obit)' | type == 'briefing'
-  ) %>% ggplot() +
-  aes(subsection, headline_sentiment_comp) +
-  stat_summary(fun = mean, geom = 'point')
+  stat_summary(fun = mean, geom = 'point') + 
+  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1)
+
+# text sentiment compound score
+df_full %>% filter(
+  !subsection == 'What in the World',
+  type == 'News' | type == 'Orbituary (Obit)' | type == 'briefing' # removing videos and Interactive Feature
+  ) %>% 
+  ggplot() +
+  aes(subsection, text_sentiment_comp) +
+  stat_summary(fun = mean, geom = 'point') + 
+  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1)
 ```
 
+
 ```{r}
-#remove videos
-df_complete <- df_complete %>% 
-  filter(
-    type == 'News' | 
+# remember to remove but count - messes things up, also not relevant
+df_long <- df_full %>% 
+  select(-c(
+    headline_sentiment_but, text_sentiment_but
+    )) %>% 
+  pivot_longer(
+    cols = contains('sentiment'),
+    names_to = 'sent_type',
+    values_to = 'sent_score'
   )
-)
-Video
-Interactive Feature
+
+# plot the different sentiment scores per subsection
+# works
+# with colours
+df_long %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  group_by(sent_type) %>% 
+  ggplot() +
+  aes(x = subsection, y = sent_score, color = sent_type) +
+  stat_summary(fun = 'mean', geom = 'point', size = 3) 
+
+# with shapes
+df_long %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  group_by(sent_type) %>% 
+  ggplot() +
+  aes(x = subsection, y = sent_score, shape = sent_type) +
+  stat_summary(fun = 'mean', geom = 'point', size = 3) +
+  scale_shape_manual(values = 7:nlevels(df_long$sent_type))
+
+# faect wrapped version
+df_long %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  group_by(sent_score) %>% 
+  ggplot() +
+  aes(x = subsection, y = sent_score, color = sent_type) +
+  stat_summary(fun = 'mean', geom = 'point') +
+  facet_wrap(~sent_type, ncol= 2
+  ) + theme(legend.position = "none")
+
+# bad plot
+df_long %>% 
+  group_by(sent_type) %>% 
+  ggplot() +
+  aes(x= subsection, y=sent_score, group = sent_type) +
+    stat_summary(fun = 'mean', geom = 'point', size = 4, shape = 21, fill = 'white') +
+  geom_line(aes(group = sent_type))
+#+
+  stat_summary(fun = 'mean', geom = 'line', color = 'green', aes(group = 1))
+
 ```
+
 
 ```{r}
 library(lmerTest)
 
-m1 <- lm(headline_sentiment_comp ~ subsection, df_complete)
+m1 <- lm(text_sentiment_comp ~ subsection, df_full)
 summary(m1)
+
+m2 <- lm(headline_sentiment_comp ~ subsection, df_full)
+summary(m2)
 
 m2 <- lm(text_sentiment_comp ~ subsection, test)
 summary(m2)
 ```
 
-# make presentation - Tuesday the 9th ? 
-# make video before the 22nd of November
-# write report 
+### QUESTIONS TO ANSWER
+# VADER
+- Read about Vader - how does it work, what are the possibilities within the package, which approach does it have to grading words, what are its flaws, strenghts etc. 
+- what are the different scores?
+- Can I simply use mean() to get a mean sentiment compound score per world section? yes..
 
-# write and comment code nicely - incl. testing scenarios and explanations of the code - it shows the workflow and is useful when understanding the code and data 
-# make nice knitted document with floating titles etc. (see homework)
-# find the link which Jonathan posted on the slack channel 
+# NYT
+- How do the NYT divide the world into sections? Is Russia a part of Europe? what is 'Americas'?
+What is the 'What in the world' section?
+
+# To do
+-  make presentation - Tuesday the 16th 
+-  make video before the 22nd of November
+-  write report - 4 pages (see syllabus)
+
+- write and comment code nicely - incl. testing scenarios and explanations of the code - it shows the workflow and is useful when understanding the code and data 
+-  make nice knitted document with floating titles etc. (see homework)
+-  find the link which Jonathan posted on the slack channel 
+
+
+### References
+
+Ooms, Jeroen (2014). The jsonlite Package: A Practical and Consistent Mapping Between JSON Data and R Objects.
+  arXiv:1403.2805 [stat.CO] URL https://arxiv.org/abs/1403.2805.
+  
+Wickham, Hadley (2021). rvest: Easily Harvest (Scrape) Web Pages. R package version 1.0.1.
+  https://CRAN.R-project.org/package=rvest
