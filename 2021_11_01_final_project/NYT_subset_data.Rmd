@@ -521,6 +521,40 @@ df_long %>%
 
 ```
 ```{r}
+df_long_2 <- df_full %>% 
+  select(-c(
+    headline_sentiment_but, text_sentiment_but
+    )) %>% 
+  pivot_longer(
+    cols = contains('comp'),
+    names_to = 'sent_type',
+    values_to = 'sent_score'
+  )
+
+# plot the different sentiment scores per subsection
+# works
+# with colours
+df_long_2 %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  group_by(sent_type) %>% 
+  ggplot() +
+  aes(x = subsection, y = sent_score, color = sent_type) +
+  stat_summary(fun = 'mean', geom = 'point', size = 2) +
+  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1) +
+  labs(
+    title = 'Sentiment compound score of the text and the headline of articles',
+    subtitle = 'Articles from New York Times (1st of January - 15th of September 2021)',
+    x = '', 
+    y = 'Compound score',
+    color = '') + 
+  scale_color_manual(labels = c('Headline', 'Text'), values = c('red', 'blue'))
+```
+
+
+
+```{r}
 # Plotting the number of articles per section
 df_full %>% 
   filter(
@@ -529,8 +563,21 @@ df_full %>%
   ggplot() +
   aes(x = subsection, fill = subsection) +
   geom_bar() +
-  theme(legend.position = 'NULL')
+  theme(legend.position = 'NULL') + 
+  labs(
+    title = 'Number of articles per subsection',
+    x = '',
+    y = 'Number of articles'
+  )
 
+# checking things out
+df_full %>% 
+  filter(
+    type == 'News',
+    subsection == 'Australia') %>% 
+  length()
+
+# only 27 articles from Australia which are labelled 'News'
 
 # number of words per article on average
 #type == news ? 
@@ -542,7 +589,13 @@ df_full %>%
   ) %>% 
   ggplot() +
   aes(subsection, word_count) + 
-  stat_summary(fun = 'mean', geom = 'point')
+  stat_summary(fun = 'mean', geom = 'point') +
+  stat_summary(fun.data = 'mean_se', geom = 'errorbar', width = .1) +
+  labs(
+    title = 'Mean word count of articles (main text)? per subsection with SE error bars',
+    x = '',
+    y = 'Word count'
+  )
 ```
 Although there is great difference between the number of articles per subsection, the smallest number of articles is still something; that is, Australia has 3492 articles. 
 
