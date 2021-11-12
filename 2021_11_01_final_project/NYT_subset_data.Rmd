@@ -616,6 +616,8 @@ m2 <- lm(text_sentiment_comp ~ subsection, test)
 summary(m2)
 ```
 
+
+
 ### QUESTIONS TO ANSWER
 # VADER
 - Read about Vader - how does it work, what are the possibilities within the package, which approach does it have to grading words, what are its flaws, strenghts etc. 
