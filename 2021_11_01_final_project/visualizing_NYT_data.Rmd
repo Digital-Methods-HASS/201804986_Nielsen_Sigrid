@@ -1,0 +1,312 @@
+---
+title: "Plotting"
+author: "Sigrid Agersnap Bom Nielsen"
+date: "11/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pacman::p_load(tidyverse)
+```
+
+# The big plotting R markdown
+
+```{r}
+# load data
+d <- read_csv('df_full.csv')
+```
+
+
+# Plotting time
+```{r}
+# bad plot
+d %>% ggplot() +
+  aes(no, headline_sentiment_comp, color = subsection) +
+  geom_point()
+
+# headline sentiment compound score
+d %>% filter(
+  !subsection == 'What in the World'
+  ) %>% 
+  ggplot() +
+  aes(subsection, headline_sentiment_comp) +
+  stat_summary(fun = mean, geom = 'point') + 
+  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1) +
+  labs(
+    title = 'Sentiment compound score of the headlines of articles',
+    subtitle = 'Articles from New York Times (1st of January - 15th of September 2021)',
+    x = '', 
+    y = 'Compound score')
+
+# text sentiment compound score
+d %>% filter(
+  !subsection == 'What in the World',
+  type == 'News' | type == 'Orbituary (Obit)' | type == 'briefing' | type == 'News Analysis' # removing videos and Interactive Feature
+  ) %>% 
+  ggplot() +
+  aes(subsection, text_sentiment_comp) +
+  stat_summary(fun = mean, geom = 'point') + 
+  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1) +
+  labs(
+    title = 'Sentiment compound score of the main text of articles',
+    subtitle = 'Articles from New York Times (1st of January - 15th of September 2021)',
+    x = '', 
+    y = 'Compound score')
+```
+
+
+```{r}
+# remember to remove but count - messes things up, also not relevant
+df_long <- d %>% 
+  select(-c(
+    headline_sentiment_but, text_sentiment_but
+    )) %>% 
+  pivot_longer(
+    cols = contains('sentiment'),
+    names_to = 'sent_type',
+    values_to = 'sent_score'
+  )
+
+# plot the different sentiment scores per subsection
+# works
+# with colours
+df_long %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  group_by(sent_type) %>% 
+  ggplot() +
+  aes(x = subsection, y = sent_score, color = sent_type) +
+  stat_summary(fun = 'mean', geom = 'point', size = 3) 
+
+# with shapes
+df_long %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  group_by(sent_type) %>% 
+  ggplot() +
+  aes(x = subsection, y = sent_score, shape = sent_type) +
+  stat_summary(fun = 'mean', geom = 'point', size = 3) +
+  scale_shape_manual(values = 7:nlevels(df_long$sent_type))
+
+# faect wrapped version
+df_long %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  group_by(sent_score) %>% 
+  ggplot() +
+  aes(x = subsection, y = sent_score, color = sent_type) +
+  stat_summary(fun = 'mean', geom = 'point') +
+  facet_wrap(~sent_type, ncol= 2
+  ) + theme(legend.position = "none")
+
+# bad plot
+df_long %>% 
+  group_by(sent_type) %>% 
+  ggplot() +
+  aes(x= subsection, y=sent_score, group = sent_type) +
+    stat_summary(fun = 'mean', geom = 'point', size = 4, shape = 21, fill = 'white') +
+  geom_line(aes(group = sent_type))
+#+
+  stat_summary(fun = 'mean', geom = 'line', color = 'green', aes(group = 1))
+
+```
+```{r}
+df_long_2 <- d %>% 
+  select(-c(
+    headline_sentiment_but, text_sentiment_but
+    )) %>% 
+  pivot_longer(
+    cols = contains('comp'),
+    names_to = 'sent_type',
+    values_to = 'sent_score'
+  )
+
+# plot the different sentiment scores per subsection
+# works - good plot
+# with colours
+df_long_2 %>% 
+  filter(
+    !subsection == 'What in the World'
+  ) %>% 
+  group_by(sent_type) %>% 
+  ggplot() +
+  aes(x = subsection, y = sent_score, color = sent_type) +
+  stat_summary(fun = 'mean', geom = 'point', size = 2) +
+  stat_summary(fun.data = "mean_se", geom = 'errorbar', width = .1) +
+  labs(
+    title = 'Sentiment compound score of the text and the headline of articles',
+    subtitle = 'Articles from New York Times (1st of January - 15th of September 2021)',
+    x = '', 
+    y = 'Compound score',
+    color = '') + 
+  scale_color_manual(labels = c('Headline', 'Text'), values = c('red', 'blue'))
+```
+
+
+
+```{r}
+################ Dealing with the different types of news ##########33
+# plot mean of words in different types of 'articles'
+d %>% 
+  filter(
+    !subsection == 'What in the World',  
+) %>% 
+  ggplot() +
+  aes(type, word_count) + 
+  stat_summary(fun = 'mean', geom = 'point') +
+  stat_summary(fun.data = 'mean_se', geom = 'errorbar', width = .1) +
+  labs(
+    title = '',
+    x = '',
+    y = 'word count'
+  )
+```
+From this know that the different types of news containing more text than a simple headline are 'briefing', 'News', 'News Analysis' and 'Obituary (Obit)'. 
+
+```{r}
+# Plotting the number of articles per section
+d %>% 
+  filter(
+    !subsection == 'What in the World',
+    type == 'News' | type == 'Obituary (Obit)' | type == 'briefing' | type == 'News Analysis'
+  ) %>% 
+  ggplot() +
+  aes(x = subsection, fill = subsection) +
+  geom_bar() +
+  theme(legend.position = 'NULL') + 
+  labs(
+    title = 'Number of articles per subsection (n total = 3036)',
+    subtitle = 'Articles from New York Times (1st of January - 15th of September 2021)',
+    x = '',
+    y = 'Number of articles'
+  ) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = +2) #vjust changes the position of the count 
+```
+
+
+```{r}
+# checking things out
+d %>% 
+  filter(
+    type == 'News' | type == 'Obituary (Obit)' |type == 'briefing' | type == 'News Analysis',
+    subsection == 'Australia') %>% 
+  count()
+# 98 'articles'
+
+# obituaries and briefings also contain words (as an article)
+# 4 out of 98 are briefing or obituary
+filter(d, type == 'Obituary (Obit)' | type == 'briefing', subsection == 'Australia')
+
+# count number of non-text objects (only headlines)
+d %>% 
+  filter(
+    type == 'Interactive Feature' | type == 'Video'
+    ) %>% 
+  count()
+
+# getting number of articles per subsection 
+d_stats <- d %>% 
+  filter(
+    type == 'News' | type == 'Obituary (Obit)' |type == 'briefing' | type == 'News Analysis') %>% 
+  tibble()
+```
+*Data* 
+Just short of 3500 articles , roughly 500 of these are videos/interactive features, which mean they only have a headline. 
+Thus, the plots only concerning the main text have around 3000 data points to play around with. 
+
+
+```{r}
+# number of words per article on average
+d %>% 
+  filter(
+    !subsection == 'What in the World',  
+    type == 'News' | type == 'Orbituary (Obit)' | type == 'briefing' | type == 'News Analysis'
+) %>% 
+  ggplot() +
+  aes(subsection, word_count, color = subsection) + 
+  stat_summary(fun = 'mean', geom = 'point') +
+  stat_summary(fun.data = 'mean_se', geom = 'errorbar', width = .1) +
+  labs(
+    title = 'Mean word count of articles (text) per subsection with standard error bars',
+    subtitle = 'Articles from New York Times (1st of January - 15th of September 2021)',
+    x = '',
+    y = 'word count'
+  ) + 
+  theme(legend.position = 'none')
+
+```
+Although there is great difference between the number of articles per subsection, the smallest number of articles is still something.. But it is very important to keep in mind! Uneven groups. 
+
+```{r}
+d %>% filter(
+  !subsection == 'What in the World',
+  subsection == 'Africa',
+  type == 'News' | type == 'Obituary (Obit)' |type == 'briefing' | type == 'News Analysis',
+) %>% 
+  count()
+```
+
+
+*number of words per article*
+*consider*
+Is this something which affects my sentiment analysis? 
+
+```{r}
+library(lmerTest)
+
+m1 <- lm(text_sentiment_comp ~ subsection, d)
+summary(m1)
+
+m2 <- lm(headline_sentiment_comp ~ subsection, d)
+summary(m2)
+
+```
+
+### QUESTIONS TO ANSWER
+# VADER
+- Read about Vader - how does it work, what are the possibilities within the package, which approach does it have to grading words, what are its flaws, strenghts etc. 
+- what are the different scores?
+from the Vader documentation: 
+"A named vector containing the valence score for each word; an overall, compound valence score for the text; the weighted percentage of positive, negative, and neutral words in the text; and the frequency of the word "but"."
+- Can I simply use mean() to get a mean sentiment compound score per world section? yes..
+
+# NYT
+- How do the NYT divide the world into sections? Is Russia a part of Europe? what is 'Americas'?
+- What is the 'What in the world' section?
+      - Americas: The total North and South America (here, I'm guessing minus Canada and US)
+      - Europe - Russia is included in 'Europe'
+      - Asia Pacific (Asien)
+      - Australia (+ Oceanien)
+      - Canada            Canada is also a part of 'Americas', but it makes sense that they have their own world part. 
+      - Middle East       the middle east is not a 'continent' 
+      - Africa
+      - 'What in the World': 
+              "What in the World offers you glimpses of what our journalists are observing around the globe." from their website. 
+              N = 2 - drop it. Seems like it is not used often. 
+
+- figure out how many articles I have from each world section and how big the word count is - graphs - done
+- wordcount: article + headline eller kun article?  - kun article (text)
+Source = Primarily the New York Times, some are also Reuters and 'AP', whatever that is (N = 234)
+
+# To do
+-  make presentation - Tuesday the 16th 
+-  make video before the 22nd of November
+-  write report - 4 pages (see syllabus)
+
+- write and comment code nicely - incl. testing scenarios and explanations of the code - it shows the workflow and is useful when understanding the code and data 
+    - write 'readme' with explanation of project and explanation of datasets 
+-  make nice knitted document with floating titles etc. (see homework)
+-  find the link which Jonathan posted on the slack channel 
+
+
+*Mean compound score of text: -0.24*
+*Mean compound score of headline: -0.17*
+
+
