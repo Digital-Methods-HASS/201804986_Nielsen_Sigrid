@@ -203,7 +203,7 @@ test <- read_html(df_articles$url[1])
  test %>% html_elements('.css-ymxi58, .e1h9rw200') %>% 
   html_text()
 
-# text headline - better option
+# text headline - better option 'CSS selector' 
 test_headline <- test %>% html_element('[data-testid="headline"]') %>% 
   html_text()
 

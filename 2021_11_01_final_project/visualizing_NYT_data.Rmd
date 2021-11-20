@@ -146,7 +146,11 @@ df_long_2 %>%
     x = '', 
     y = 'Compound score',
     color = '') + 
-  scale_color_manual(labels = c('Headline', 'Text'), values = c('red', 'blue'))
+  scale_color_manual(labels = c('Headline', 'Text'), values = c('red', 'blue')) +
+  geom_hline(
+    yintercept = .2, 
+    alpha = .4
+  )
 ```
 
 
@@ -223,6 +227,14 @@ Thus, the plots only concerning the main text have around 3000 data points to pl
 
 
 ```{r}
+# creating a dataframe with the wordcount != 0
+d_mean <- d %>% 
+  filter(
+    !subsection == 'What in the World',  
+    type == 'News' | type == 'Orbituary (Obit)' | type == 'briefing' | type == 'News Analysis' 
+  )
+
+
 # number of words per article on average
 d %>% 
   filter(
@@ -239,12 +251,86 @@ d %>%
     x = '',
     y = 'word count'
   ) + 
-  theme(legend.position = 'none')
+  theme(legend.position = 'none') +
+  geom_hline(yintercept = mean(d_mean$word_count), alpha = .4) +
+  coord_cartesian(ylim = c(0,1150))
+
+
 
 ```
 Although there is great difference between the number of articles per subsection, the smallest number of articles is still something.. But it is very important to keep in mind! Uneven groups. 
 
 ```{r}
+
+# development over time plot 
+d_mean %>% 
+  filter(
+    subsection != 'What in the World'
+  ) %>% 
+  group_by(subsection) %>% 
+  ggplot() +
+  aes(
+    month, mean_sent, color = subsection) +
+  stat_summary(fun= 'mean', geom = 'line') + facet_wrap(~subsection)
+
+```
+```{r}
+#loading package which can handle the R date format POSIXct and POSIXt 
+pacman::p_load(lubridate)
+
+# creating test df
+d_test <- d
+
+# making a new column which only specifies the month
+d_test$month <- month(d_test$pub_date)
+
+# get the mean sentiment compound score for the texts per subsection per month
+d_mean <- d_test %>% 
+  group_by(
+    month, 
+    subsection) %>% 
+  summarize(
+    mean_sent = mean(text_sentiment_comp)
+    )
+
+# creating labels 
+months_labs <- c('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September')
+
+#plotting
+d_mean %>% 
+  filter(
+    subsection != 'What in the World'
+  ) %>% 
+  ggplot() +
+  aes(
+    as.factor(month), mean_sent, color = subsection, group = subsection
+  ) + 
+geom_line() + 
+  scale_x_discrete(
+    breaks = c(1, 2,3,4,5,6,7,8,9),
+    labels = months_labs) +
+  labs(
+    title = 'Average sentiment compound score per month per subsection',
+    x = '',
+    y = 'Average sentiment compound score'
+  ) #+ 
+  facet_wrap(~subsection, ncol = 2)
+```
+Not any clear trends, but this might be due to the number of data points in each subsection per month
+```{r}
+# counting
+d_test %>% filter(
+  !subsection == 'What in the World',
+  subsection == 'Africa',
+  month == '1'
+) %>% 
+  count()
+```
+Yeah, we don't have a lot of data points per subsection per month. 
+
+
+```{r} 
+# counting
 d %>% filter(
   !subsection == 'What in the World',
   subsection == 'Africa',
@@ -267,13 +353,16 @@ summary(m1)
 m2 <- lm(headline_sentiment_comp ~ subsection, d)
 summary(m2)
 
+m3 <- lm(word_count ~ subsection, d)
+summary(m3)
+
 ```
 
 ### QUESTIONS TO ANSWER
 # VADER
 - Read about Vader - how does it work, what are the possibilities within the package, which approach does it have to grading words, what are its flaws, strenghts etc. 
 - what are the different scores?
-from the Vader documentation: 
+from the Vader documentation:  
 "A named vector containing the valence score for each word; an overall, compound valence score for the text; the weighted percentage of positive, negative, and neutral words in the text; and the frequency of the word "but"."
 - Can I simply use mean() to get a mean sentiment compound score per world section? yes..
 
