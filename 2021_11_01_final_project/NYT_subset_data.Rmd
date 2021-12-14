@@ -14,7 +14,6 @@ For this project, I want to scrape articles from the 'World' section of the New 
 
 ## Methods
 I'm using the New York Times API tool, where I have made two searches, as there is an upper limit to how much data you can retrieve from the NYT.
-*explain what an API is*
 
 In the API I wrote the begin and end data for my search. First search was from the 1st of January to the 1st of May 2021. The second search was from 2nd of May to the 15th of September 2021. 
 To retrieve this exact data, I wrote the following in the filter called 'fq': 
@@ -72,7 +71,7 @@ pages <- round(d$response.meta.hits/10-1)[1]
 # the first page is 0 so that's why I subtract 1
 
 # second time around
-pages2 <- round(d2$response.meta.hits/10-1)[1]
+#pages2 <- round(d2$response.meta.hits/10-1)[1]
 
 ```
 I have roughly 154 pages. This is great, as the NYT API has an upper limit of downloading from more than 200 pages.
@@ -193,7 +192,7 @@ df_articles2 <- df_articles2 %>%
 # Get the text from each url
 First, use rvest to get the text (headline + body) from one url 
 
-I did this by exploring the source code behind one of the articles to see exactly which *javascript* markers I needed.
+I did this by exploring the source code behind one of the articles to see exactly which CSS markers I needed.
 
 ```{r testing rvest}
 #getting URL 
