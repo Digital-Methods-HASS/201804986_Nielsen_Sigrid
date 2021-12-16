@@ -42,7 +42,7 @@ As I did this in two installments, I have commented the second one out. It takes
 url <-  'https://api.nytimes.com/svc/search/v2/articlesearch.json?begin_date=20210101&end_date=20210501&fq=fq%20%3D%20section_name%3A(%22World%22)%20AND%20subsection_name%3A(*)&api-key=ZAJ6xiTXYbfqkdUJqQKGoyPKXhbosYQC'
 
 # second round of data collection
-url2 <- 'https://api.nytimes.com/svc/search/v2/articlesearch.json?begin_date=20210502&end_date=20210915&fq=fq%20%3D%20section_name%3A(%22World%22)%20AND%20subsection_name%3A(*)%20&api-key=ZAJ6xiTXYbfqkdUJqQKGoyPKXhbosYQC'
+#url2 <- 'https://api.nytimes.com/svc/search/v2/articlesearch.json?begin_date=20210502&end_date=20210915&fq=fq%20%3D%20section_name%3A(%22World%22)%20AND%20subsection_name%3A(*)%20&api-key=ZAJ6xiTXYbfqkdUJqQKGoyPKXhbosYQC'
 ```
 
 To see what the data looked like, I used the fromJSON() function from the jsonlite package to get the data from only one page of the url.
@@ -266,12 +266,6 @@ Remember to save your work.
 #write_csv(df_text, 'df_text2.csv')
 ```
 
-```{r merge data frames}
-# merge when done - works
-#df_global <- merge(df_text, df)
-# DELETE
-```
-
 # Time to get to the sentiment analysis 
 
 The get_vader() function spits out a nested list of 6 lists; the score per word in the text (word_score), a compound score, a positive score, a neutral score, a negative score and a but count. Thus, by indexing the variable in which I've saved the result of get_vader(), I can specify which score I want.  
@@ -424,6 +418,8 @@ Saving the full, beautiful data set.
 ```
 
 ### References
+
+Bruk, L. (2019). JSON Peep for Safari for PC and Mac. In (Version 1.2.1) [Computer software]. https://pcmacstore.com/en/app/1458969831/json-peep-for-safari
 
 Ooms, Jeroen (2014). The jsonlite Package: A Practical and Consistent Mapping Between JSON Data and R Objects.
   arXiv:1403.2805 [stat.CO] URL https://arxiv.org/abs/1403.2805.
