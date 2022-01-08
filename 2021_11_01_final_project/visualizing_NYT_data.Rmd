@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r loading packages}
-pacman::p_load(tidyverse, lubridate, lmerTest)
+pacman::p_load(tidyverse, lubridate)
 ```
 
 # The big plotting R markdown
@@ -538,3 +538,9 @@ m1 <- lm(mean_sent_comp ~ subsection, d)
 summary(m1)
 ```
 
+```{r}
+# assumptions check
+plot(m1)
+qqnorm(resid(m1))
+```
+Residuals are fairly normally distributed. Looks alright. 
